@@ -10,4 +10,8 @@ class Model
       @attributes[name]
     end
   end
+
+  def method_missing(name, *)
+    @attributes[name] || super
+  end
 end

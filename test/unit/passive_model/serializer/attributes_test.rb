@@ -2,35 +2,61 @@ require 'test_helper'
 
 module PassiveModel
   class Serializer
-    class AttributesTest < Minitest::Test
+    class AttributesTest < Test
+      class ProfileSerializer < Serializer
+        attributes :name, :description
+      end
+
+      class ProfileSerializerWithComments < ProfileSerializer
+        attributes :comments
+      end
+
+      class CustomProfileSerializer < Serializer
+        attributes :name, :custom
+
+        def name
+          object.name.downcase
+        end
+
+        def custom
+          'custom'
+        end
+      end
+
       def setup
-        @profile = Model.new(
+        @profile = Model.new({
           name: 'Name',
           description: 'Description',
-          comments: 'Comments')
-
-        @profile_serializer_klass = Class.new(PassiveModel::Serializer) do
-          attributes :name, :description
-        end
+          comments: 'Comments'
+        })
       end
 
       def test_attributes
-        assert_equal({name: 'Name', description: 'Description'},
-          @profile_serializer_klass.new(@profile).serializable_hash)
+        expected = {
+          name: 'Name',
+          description: 'Description'
+        }
+
+        assert_serialized expected, ProfileSerializer.new(@profile)
       end
 
-      def test_attributes_inheritance
-        subklass = Class.new(@profile_serializer_klass)
+      def test_inheritance
+        expected_with_comments = {
+          name: 'Name',
+          description: 'Description',
+          comments: 'Comments'
+        }
 
-        subklass_with_comments = Class.new(@profile_serializer_klass) do
-          attributes :comments
-        end
+        assert_serialized expected_with_comments, ProfileSerializerWithComments.new(@profile)
+      end
 
-        assert_equal({name: 'Name', description: 'Description'},
-          subklass.new(@profile).serializable_hash)
+      def test_custom_attributes
+        expected_custom = {
+          name: 'name',
+          custom: 'custom'
+        }
 
-        assert_equal({name: 'Name', description: 'Description', comments: 'Comments'},
-          subklass_with_comments.new(@profile).serializable_hash)
+        assert_serialized expected_custom, CustomProfileSerializer.new(@profile)
       end
     end
   end
