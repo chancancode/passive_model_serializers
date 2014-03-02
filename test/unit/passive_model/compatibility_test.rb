@@ -2,7 +2,7 @@ require 'test_helper'
 
 module PassiveModel
   class Serializer
-    class HasOneTest < Test
+    class CompatibilityTest < Test
       class Image < Model
       end
 
