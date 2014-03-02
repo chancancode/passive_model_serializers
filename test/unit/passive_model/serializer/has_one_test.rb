@@ -22,6 +22,11 @@ module PassiveModel
         end
       end
 
+      class ProfileSerializerWithInlineOption < Serializer
+        attributes :name, :description
+        has_one :image, serializer: FullImageSerializer
+      end
+
       class ProfileSerializerWithLocalSerializer < ProfileSerializer
         ImageSerializer = FullImageSerializer
       end
@@ -76,17 +81,30 @@ module PassiveModel
         assert_serialized @expected_full, ProfileSerializerWithLocalSerializer.new(@profile)
       end
 
-      def test_has_one_with_delegate
-        assert_serialized @expected_full, ProfileSerializer.new(@profile, delegate: Delegate)
+      def test_has_one_with_inline_option
+        assert_serialized @expected_full, ProfileSerializerWithInlineOption.new(@profile)
+        assert_serialized @expected_full, ProfileSerializerWithInlineOption.new(@profile, delegate: Delegate)
       end
 
       def test_has_one_with_local_hook
         assert_serialized @expected_full, ProfileSerializerWithLocalHook.new(@profile)
+        assert_serialized @expected_full, ProfileSerializerWithLocalHook.new(@profile, delegate: NullDelegate)
       end
 
-      def test_has_one_with_delegate_returning_nil
-        assert_serialized @expected, ProfileSerializer.new(@profile, delegate: NullDelegate)
-        assert_serialized @expected_full, ProfileSerializerWithLocalHook.new(@profile, delegate: NullDelegate)
+      def test_has_one_with_delegate
+        assert_serialized @expected_full, ProfileSerializer.new(@profile, delegate: Delegate)
+        assert_serialized @expected_full, ProfileSerializer.new(@profile, delegates: Delegate)
+      end
+
+      def test_has_one_delegates_chain
+        assert_serialized @expected, ProfileSerializer.new(@profile, delegate: [NullDelegate])
+        assert_serialized @expected, ProfileSerializer.new(@profile, delegates: [NullDelegate])
+
+        assert_serialized @expected_full, ProfileSerializer.new(@profile, delegate: [NullDelegate, Delegate])
+        assert_serialized @expected_full, ProfileSerializer.new(@profile, delegates: [NullDelegate, Delegate])
+
+        assert_serialized @expected_full, ProfileSerializerWithLocalHook.new(@profile, delegate: [NullDelegate])
+        assert_serialized @expected_full, ProfileSerializerWithLocalHook.new(@profile, delegates: [NullDelegate])
       end
     end
   end

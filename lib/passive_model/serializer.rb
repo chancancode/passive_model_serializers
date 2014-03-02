@@ -71,13 +71,19 @@ module PassiveModel
 
         _attributes[assoc] = :"_serializable_#{assoc}"
       end
+
+      def serializer_for(assoc_object, serializer, type, assoc, options)
+        if type == :has_one
+          serializer.class.const_get("#{assoc.to_s.classify}Serializer")
+        end
+      end
     end
 
     attr_accessor :object
 
     def initialize(object, **options)
       @object = object
-      @delegate = options.delete(:delegate)
+      @delegates = [options.delete(:delegate), options.delete(:delegates), self].flatten.compact
       @options = options
     end
 
@@ -91,18 +97,20 @@ module PassiveModel
       attributes
     end
 
-    protected
-      def serializer_for(assoc_object, serializer, type, assoc, options)
-        if type == :has_one
-          self.class.const_get("#{assoc.to_s.classify}Serializer")
-        end
-      end
-
     private
       def build_serializer(assoc_object, type, assoc, options)
-        serializer = options[:serializer] ||
-          @delegate.try(:serializer_for, assoc_object, self, type, assoc, options) ||
-          self.serializer_for(assoc_object, self, type, assoc, options)
+        # Inline options trumps everything
+        serializer = options[:serializer]
+
+        # Then the each delegate gets a chance
+        serializer ||= @delegates.inject(nil) do |_, delegate|
+          if (s = delegate.try(:serializer_for, assoc_object, self, type, assoc, options))
+            break s
+          end
+        end
+
+        # Finally, use the default lookup mechanism as a fallback
+        serializer ||= Serializer.serializer_for(assoc_object, self, type, assoc, options)
 
         serializer.new(assoc_object)
       end
