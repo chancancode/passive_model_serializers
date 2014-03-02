@@ -12,6 +12,10 @@ module PassiveModel
         attributes :src
       end
 
+      class PictureSerializer < Serializer
+        attributes :src
+      end
+
       class FullImageSerializer < Serializer
         attributes :src, :width, :height
       end
@@ -20,6 +24,11 @@ module PassiveModel
         def serializer_for(assoc_object, serializer, type, assoc, options)
           FullImageSerializer
         end
+      end
+
+      class ProfileSerializerWithPicture < Serializer
+        attributes :name, :description
+        has_one :picture
       end
 
       class ProfileSerializerWithInlineOption < Serializer
@@ -49,7 +58,8 @@ module PassiveModel
         @profile = Model.new({
           name: 'Name',
           description: 'Description',
-          image: Model.new(src: '/img.jpg', width: 50, height: 50)
+          image: Model.new(src: '/img.jpg', width: 50, height: 50),
+          picture: Model.new(src: '/img.jpg', width: 50, height: 50)
         })
 
         @expected = {
@@ -64,13 +74,15 @@ module PassiveModel
           image: {src: '/img.jpg', width: 50, height: 50}
         }
 
-        # Setup the global ImageSerializer constant
+        # Setup the global ImageSerializer and PictureSerializer constants
         Object.const_set :ImageSerializer, ImageSerializer
+        Object.const_set :PictureSerializer, PictureSerializer
       end
 
       def teardown
         # Remove the global ImageSerializer constant
         Object.send :remove_const, :ImageSerializer
+        Object.send :remove_const, :PictureSerializer
       end
 
       def test_has_one_with_global_serializer
@@ -79,6 +91,16 @@ module PassiveModel
 
       def test_has_one_with_local_serializer
         assert_serialized @expected_full, ProfileSerializerWithLocalSerializer.new(@profile)
+      end
+
+      def test_has_one_with_different_name
+        expected = {
+          name: 'Name',
+          description: 'Description',
+          picture: {src: '/img.jpg'}
+        }
+
+        assert_serialized expected, ProfileSerializerWithPicture.new(@profile)
       end
 
       def test_has_one_with_inline_option

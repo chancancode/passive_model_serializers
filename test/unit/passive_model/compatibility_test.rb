@@ -6,12 +6,17 @@ module PassiveModel
       class Image < Model
       end
 
-      class ProfileSerializer < Serializer
+      class ProfileSerializer < ActiveModel::Serializer
         attributes :name, :description
         has_one :image
       end
 
-      class ImageSerializer < Serializer
+      class ProfileSerializerWithPicture < ActiveModel::Serializer
+        attributes :name, :description
+        has_one :picture
+      end
+
+      class ImageSerializer < ActiveModel::Serializer
         attributes :src
       end
 
@@ -19,11 +24,12 @@ module PassiveModel
         @profile = Model.new({
           name: 'Name',
           description: 'Description',
-          image: Image.new(src: '/img.jpg')
+          image: Image.new(src: '/img.jpg'),
+          picture: Image.new(src: '/img.jpg')
         })
       end
 
-      def test_has_one_with_namespaced_serializer
+      def test_has_one
         expected = {
           name: 'Name',
           description: 'Description',
@@ -31,6 +37,16 @@ module PassiveModel
         }
 
         assert_serialized expected, ProfileSerializer.new(@profile)
+      end
+
+      def test_has_one_with_different_name
+        expected = {
+          name: 'Name',
+          description: 'Description',
+          picture: {src: '/img.jpg'}
+        }
+
+        assert_serialized expected, ProfileSerializerWithPicture.new(@profile)
       end
     end
   end
